@@ -119,6 +119,25 @@ h1{font-size:clamp(24px,6vw,34px)}
   button,input:not([type=checkbox]),select{min-height:44px}
   .qty button{min-height:0}
 }
+/* ---- Fechamento ---- */
+.cbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:14px}
+.cbar h2{margin:0;font-size:20px;font-weight:800;text-transform:capitalize;flex:1;min-width:140px}
+.cstats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:8px}
+.cstats .stat{min-width:0}
+.cstats .stat b{font-size:clamp(18px,5vw,26px);overflow-wrap:anywhere}
+.cstats .big{grid-column:1/-1;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.cstats .big span{color:var(--accent-ink);opacity:.85}
+.crow,.lrow{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.crow .cl{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}
+.crow .bar i{background:var(--accent)}
+.lrow{display:flex;align-items:center;gap:10px}
+.lrow .ld{flex:1;min-width:0}
+.lrow b{white-space:nowrap}
+.meta .cost{width:78px;padding:3px 6px;font-size:14px;min-height:36px}
+.sp{width:92px;text-align:center;padding:7px 4px}
+#tabClose{max-width:860px}
+@media (min-width:640px){.cstats{grid-template-columns:repeat(4,minmax(0,1fr))}.cstats .big{grid-column:auto}}
+@media (max-width:480px){.shopitem .sp{flex:1 1 90px;width:auto}}
 </style>
 </head>
 <body>
@@ -129,6 +148,7 @@ h1{font-size:clamp(24px,6vw,34px)}
   <div class="tabs" role="tablist">
     <button class="on" data-tab="stock" role="tab" aria-selected="true">Estoque</button>
     <button data-tab="shop" id="tabShopBtn" role="tab" aria-selected="false">Compras</button>
+    <button data-tab="close" role="tab" aria-selected="false">Fechamento</button>
   </div>
 
   <section id="tabStock">
@@ -149,6 +169,7 @@ h1{font-size:clamp(24px,6vw,34px)}
       </label>
       <label>Quantidade atual<input id="fQty" type="number" min="0" step="any" value="0" inputmode="decimal"></label>
       <label>Estoque mínimo<input id="fMin" type="number" min="0" step="any" value="1" inputmode="decimal"></label>
+      <label>Preço unitário (R$)<input id="fCost" type="number" min="0" step="any" placeholder="opcional" inputmode="decimal"></label>
       <button class="primary wide" id="btnAdd">Adicionar ao estoque</button>
     </div>
   </details>
@@ -171,6 +192,10 @@ h1{font-size:clamp(24px,6vw,34px)}
         <label>Unidade
           <select id="sUnit"><option>kg</option><option>un</option><option>L</option><option>cx</option><option>pct</option></select>
         </label>
+        <label>Categoria
+          <select id="sCat"><option>Mercearia</option><option>Carnes</option><option>Hortifruti</option><option>Laticínios</option><option>Bebidas</option><option>Limpeza</option><option>Outros</option></select>
+        </label>
+        <label>Preço unitário (R$)<input id="sPrice" type="number" min="0" step="any" placeholder="opcional" inputmode="decimal"></label>
         <button class="primary wide" id="btnShopAdd">Adicionar à lista</button>
       </div>
     </details>
@@ -185,7 +210,42 @@ h1{font-size:clamp(24px,6vw,34px)}
       <button class="primary" id="btnDone">Concluir compra</button>
       <button id="btnClearAll">Limpar lista</button>
     </div>
-    <p class="meta">Ao concluir, os itens marcados que vieram do estoque somam a quantidade comprada ao estoque e saem da lista.</p>
+    <p class="meta">Ao concluir, os itens marcados que vieram do estoque somam a quantidade comprada ao estoque e saem da lista e entram nos gastos do mês.</p>
+  </section>
+
+  <section id="tabClose" hidden>
+    <div class="cbar">
+      <label>Mês<input type="month" id="cMonth" placeholder="AAAA-MM"></label>
+      <h2 id="cTitle"></h2>
+    </div>
+    <div class="cstats">
+      <div class="stat big"><b id="cTotal">R$ 0,00</b><span>Total gasto no mês</span></div>
+      <div class="stat"><b id="cBuy">R$ 0,00</b><span>Compras</span></div>
+      <div class="stat"><b id="cExtra">R$ 0,00</b><span>Outros gastos</span></div>
+      <div class="stat"><b id="cStock">R$ 0,00</b><span>Sobrou em estoque</span></div>
+    </div>
+    <p class="meta">Os gastos vêm das compras concluídas na aba Compras (com preço informado) e dos outros gastos lançados abaixo. O que sobrou é o estoque atual multiplicado pelo preço unitário.</p>
+
+    <details>
+      <summary>Lançar outro gasto (gás, energia, manutenção...)</summary>
+      <div class="form">
+        <label class="wide">Descrição<input id="xDesc" placeholder="Ex.: Botijão de gás"></label>
+        <label>Valor (R$)<input id="xVal" type="number" min="0" step="any" inputmode="decimal"></label>
+        <button class="primary wide" id="btnExtra">Lançar gasto</button>
+      </div>
+    </details>
+
+    <div class="group">Gastos por categoria</div>
+    <div id="cCats"></div>
+    <div class="group">Lançamentos do mês</div>
+    <div id="cRows"></div>
+    <div class="group">O que sobrou no estoque</div>
+    <div id="cLeft"></div>
+
+    <div class="shopbar"><button class="primary" id="btnCloseMonth">Fechar este mês</button></div>
+    <div class="msg" id="cMsg" role="status"></div>
+    <div class="group">Meses fechados</div>
+    <div id="cHist"></div>
   </section>
 </main>
 
@@ -236,7 +296,7 @@ h1{font-size:clamp(24px,6vw,34px)}
       var tag=s==="out"?'<span class="tag">Acabou</span>':(s==="low"?'<span class="tag">Repor</span>':"");
       html+='<div class="item '+s+'" data-id="'+i.id+'">'+
         '<div><div class="name">'+esc(i.name)+tag+'</div>'+
-        '<div class="meta">Mínimo: '+fmt(i.min)+' '+esc(i.unit)+' · <button class="del" data-act="del">remover</button></div></div>'+
+        '<div class="meta">Mínimo: '+fmt(i.min)+' '+esc(i.unit)+' · R$ <input class="cost" type="number" min="0" step="any" inputmode="decimal" placeholder="preço" value="'+(i.cost||'')+'" data-act="cost" aria-label="Preço unitário de '+esc(i.name)+'">/'+esc(i.unit)+' · <button class="del" data-act="del">remover</button></div></div>'+
         '<div class="qty"><button data-act="dec" aria-label="Diminuir">−</button>'+
         '<input type="number" min="0" step="any" inputmode="decimal" value="'+i.qty+'" data-act="set" aria-label="Quantidade de '+esc(i.name)+'">'+
         '<span class="unit">'+esc(i.unit)+'</span>'+
@@ -259,19 +319,19 @@ h1{font-size:clamp(24px,6vw,34px)}
     save();render();
   });
   $("list").addEventListener("change",function(e){
-    if(e.target.dataset.act!=="set")return;
+    var act=e.target.dataset.act;if(act!=="set"&&act!=="cost")return;
     var it=find(e.target);if(!it)return;
     var v=parseFloat(String(e.target.value).replace(",","."));
-    it.qty=isNaN(v)||v<0?0:v;
+    if(act==="cost")it.cost=isNaN(v)||v<0?0:v;else it.qty=isNaN(v)||v<0?0:v;
     save();render();
   });
 
   $("btnAdd").addEventListener("click",function(){
     var name=$("fName").value.trim();
     if(!name){$("fName").focus();return;}
-    var qty=parseFloat($("fQty").value), min=parseFloat($("fMin").value);
-    items.push({id:Date.now(),name:name,cat:$("fCat").value,unit:$("fUnit").value,qty:isNaN(qty)?0:Math.max(0,qty),min:isNaN(min)?0:Math.max(0,min)});
-    $("fName").value="";$("fQty").value=0;
+    var qty=parseFloat($("fQty").value), min=parseFloat($("fMin").value), cost=parseFloat(String($("fCost").value).replace(",","."));
+    items.push({id:Date.now(),name:name,cat:$("fCat").value,unit:$("fUnit").value,qty:isNaN(qty)?0:Math.max(0,qty),min:isNaN(min)?0:Math.max(0,min),cost:isNaN(cost)?0:Math.max(0,cost)});
+    $("fName").value="";$("fQty").value=0;$("fCost").value="";
     save();render();
   });
   $("q").addEventListener("input",render);
@@ -289,7 +349,8 @@ h1{font-size:clamp(24px,6vw,34px)}
   function renderShop(){
     var done=shop.filter(function(s){return s.done;}).length;
     $("tabShopBtn").textContent="Compras"+(shop.length-done>0?" ("+(shop.length-done)+")":"");
-    $("shopCount").textContent=shop.length?done+" de "+shop.length+" comprados":"";
+    var est=shop.reduce(function(t,s){return t+(s.price||0)*s.qty;},0);
+    $("shopCount").textContent=shop.length?done+" de "+shop.length+" comprados"+(est>0?" · estimado "+brl(est):""):"";
     if(!shop.length){
       $("shopList").innerHTML='<div class="empty">A lista está vazia. Adicione itens acima ou toque em “Incluir itens para repor”.</div>';
       return;
@@ -301,6 +362,7 @@ h1{font-size:clamp(24px,6vw,34px)}
         '<span class="sname">'+esc(s.name)+'</span>'+
         '<input class="sq" type="number" min="0" step="any" inputmode="decimal" value="'+s.qty+'" data-sact="qty" aria-label="Quantidade de '+esc(s.name)+'">'+
         '<span class="unit">'+esc(s.unit)+'</span>'+
+        '<input class="sp" type="number" min="0" step="any" inputmode="decimal" placeholder="R$ unit." value="'+(s.price||'')+'" data-sact="price" aria-label="Preço unitário de '+esc(s.name)+'">'+
         '<button class="del" data-sact="del">remover</button></div>';
     }).join("");
   }
@@ -316,10 +378,10 @@ h1{font-size:clamp(24px,6vw,34px)}
     say("");saveShop();renderShop();
   });
   $("shopList").addEventListener("change",function(e){
-    if(e.target.dataset.sact!=="qty")return;
+    var sa=e.target.dataset.sact;if(sa!=="qty"&&sa!=="price")return;
     var s=findShop(e.target);if(!s)return;
     var v=parseFloat(String(e.target.value).replace(",","."));
-    s.qty=isNaN(v)||v<0?0:v;
+    if(sa==="price")s.price=isNaN(v)||v<0?0:v;else s.qty=isNaN(v)||v<0?0:v;
     saveShop();renderShop();
   });
 
@@ -328,8 +390,9 @@ h1{font-size:clamp(24px,6vw,34px)}
     if(!name){$("sName").focus();return;}
     var qty=parseFloat($("sQty").value);if(isNaN(qty)||qty<=0)qty=1;
     var match=items.filter(function(i){return i.name.toLowerCase()===name.toLowerCase();})[0];
-    shop.push({id:Date.now(),name:match?match.name:name,qty:qty,unit:match?match.unit:$("sUnit").value,done:false,stockId:match?match.id:null});
-    $("sName").value="";$("sQty").value=1;
+    var pr=parseFloat(String($("sPrice").value).replace(",","."));if(isNaN(pr)||pr<0)pr=match&&match.cost?match.cost:0;
+    shop.push({id:Date.now(),name:match?match.name:name,qty:qty,unit:match?match.unit:$("sUnit").value,done:false,stockId:match?match.id:null,price:pr,cat:match?match.cat:$("sCat").value});
+    $("sName").value="";$("sQty").value=1;$("sPrice").value="";
     say(match?"Item encontrado no estoque: a compra será somada a ele.":"");
     saveShop();renderShop();
   });
@@ -339,7 +402,7 @@ h1{font-size:clamp(24px,6vw,34px)}
     items.forEach(function(i){
       if(status(i)=="ok")return;
       if(shop.some(function(s){return s.stockId===i.id;}))return;
-      shop.push({id:Date.now()+added,name:i.name,qty:Math.max(r2(i.min*2-i.qty),1),unit:i.unit,done:false,stockId:i.id});
+      shop.push({id:Date.now()+added,name:i.name,qty:Math.max(r2(i.min*2-i.qty),1),unit:i.unit,done:false,stockId:i.id,cat:i.cat,price:i.cost||0});
       added++;
     });
     say(added?added+(added>1?" itens incluídos.":" item incluído."):"Nenhum item novo para repor.");
@@ -352,11 +415,12 @@ h1{font-size:clamp(24px,6vw,34px)}
     var toStock=0;
     bought.forEach(function(s){
       var it=s.stockId?items.filter(function(i){return i.id===s.stockId;})[0]:null;
-      if(it){it.qty=r2(it.qty+s.qty);toStock++;}
+      if(it){it.qty=r2(it.qty+s.qty);if(s.price>0)it.cost=s.price;toStock++;}
+      ledger.push({id:Date.now()+ledger.length,date:today(),kind:"compra",desc:s.name,cat:s.cat||(it?it.cat:"Outros"),qty:s.qty,unit:s.unit,total:r2((s.price||0)*s.qty)});
     });
     shop=shop.filter(function(s){return !s.done;});
-    say("Compra concluída: "+bought.length+" na lista, "+toStock+" somados ao estoque.");
-    save();saveShop();render();renderShop();
+    say("Compra concluída: "+bought.length+" lançados nos gastos, "+toStock+" somados ao estoque."+(bought.some(function(s){return !(s.price>0);})?" Atenção: há itens sem preço, então o total gasto pode estar incompleto.":""));
+    save();saveShop();saveLedger();render();renderShop();
   });
 
   $("btnClearAll").addEventListener("click",function(){
@@ -367,14 +431,84 @@ h1{font-size:clamp(24px,6vw,34px)}
 
   document.querySelector(".tabs").addEventListener("click",function(e){
     var b=e.target.closest("button");if(!b)return;
-    var shopTab=b.dataset.tab==="shop";
-    $("tabStock").hidden=shopTab;$("tabShop").hidden=!shopTab;
+    var t=b.dataset.tab;
+    $("tabStock").hidden=t!=="stock";$("tabShop").hidden=t!=="shop";$("tabClose").hidden=t!=="close";
+    if(t==="close")renderClose();
     Array.prototype.forEach.call(this.querySelectorAll("button"),function(x){
       var on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-selected",on);
     });
   });
 
   render();
+  /* ---- Fechamento do mês ---- */
+  var KEY3='estoque-cozinha-gastos-v1', KEY4='estoque-cozinha-fechamentos-v1';
+  function ld(k){try{var r=localStorage.getItem(k);if(r){var a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
+  var ledger=ld(KEY3), closings=ld(KEY4);
+  function saveLedger(){try{localStorage.setItem(KEY3,JSON.stringify(ledger));}catch(e){}}
+  function saveClosings(){try{localStorage.setItem(KEY4,JSON.stringify(closings));}catch(e){}}
+  function pad(n){return n<10?'0'+n:''+n;}
+  function today(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function brl(n){try{return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}catch(e){return 'R$ '+n.toFixed(2).replace('.',',');}}
+  function monthLabel(m){var p=m.split('-');try{return new Date(+p[0],+p[1]-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});}catch(e){return m;}}
+  function dayBR(d){var p=d.split('-');return p[2]+'/'+p[1];}
+  function stockValue(){return items.reduce(function(t,i){return t+i.qty*(i.cost||0);},0);}
+  function monthData(m){
+    var rows=ledger.filter(function(l){return l.date.slice(0,7)===m;}).sort(function(a,b){return a.date<b.date?1:(a.date>b.date?-1:0);});
+    var d={rows:rows,buy:0,extra:0,byCat:{}};
+    rows.forEach(function(l){
+      if(l.kind==='extra'){d.extra+=l.total;d.byCat['Outros gastos']=(d.byCat['Outros gastos']||0)+l.total;}
+      else{d.buy+=l.total;d.byCat[l.cat]=(d.byCat[l.cat]||0)+l.total;}
+    });
+    d.total=d.buy+d.extra;return d;
+  }
+  function renderClose(){
+    var m=$('cMonth').value;
+    if(!m){m=today().slice(0,7);$('cMonth').value=m;}
+    var d=monthData(m);
+    $('cTitle').textContent=monthLabel(m);
+    $('cTotal').textContent=brl(d.total);$('cBuy').textContent=brl(d.buy);$('cExtra').textContent=brl(d.extra);$('cStock').textContent=brl(stockValue());
+    var cats=Object.keys(d.byCat).sort(function(a,b){return d.byCat[b]-d.byCat[a];});
+    var max=cats.length?d.byCat[cats[0]]:0;
+    $('cCats').innerHTML=cats.length?cats.map(function(c){
+      return '<div class="crow"><div class="cl"><span>'+esc(c)+'</span><b>'+brl(d.byCat[c])+'</b></div><div class="bar"><i style="width:'+(max>0?d.byCat[c]/max*100:0)+'%"></i></div></div>';
+    }).join(''):'<div class="empty">Nenhum gasto neste mês.</div>';
+    $('cRows').innerHTML=d.rows.length?d.rows.map(function(l){
+      var det=l.kind==='extra'?'Outro gasto':fmt(l.qty)+' '+esc(l.unit)+' · '+esc(l.cat);
+      return '<div class="lrow" data-lid="'+l.id+'"><div class="ld"><div class="name">'+esc(l.desc)+'</div><div class="meta">'+dayBR(l.date)+' · '+det+'</div></div><b>'+brl(l.total)+'</b><button class="del" data-cact="dellog">remover</button></div>';
+    }).join(''):'<div class="empty">Sem lançamentos neste mês.</div>';
+    var left=items.filter(function(i){return i.qty>0;}).sort(function(a,b){return b.qty*(b.cost||0)-a.qty*(a.cost||0);});
+    $('cLeft').innerHTML=left.length?left.map(function(i){
+      return '<div class="lrow"><div class="ld"><div class="name">'+esc(i.name)+'</div><div class="meta">'+fmt(i.qty)+' '+esc(i.unit)+(i.cost?' × '+brl(i.cost):' · sem preço')+'</div></div><b>'+(i.cost?brl(i.qty*i.cost):'—')+'</b></div>';
+    }).join(''):'<div class="empty">O estoque está vazio.</div>';
+    $('cHist').innerHTML=closings.length?closings.slice().sort(function(a,b){return a.month<b.month?1:-1;}).map(function(c){
+      return '<div class="lrow"><div class="ld"><div class="name" style="text-transform:capitalize">'+esc(monthLabel(c.month))+'</div><div class="meta">Fechado em '+dayBR(c.closedAt)+' · sobraram '+brl(c.stockValue)+' em estoque ('+c.left.length+' itens)</div></div><b>'+brl(c.spent)+'</b></div>';
+    }).join(''):'<div class="empty">Nenhum mês fechado ainda.</div>';
+  }
+  $('cMonth').addEventListener('change',function(){$('cMsg').textContent='';renderClose();});
+  $('cRows').addEventListener('click',function(e){
+    var b=e.target.closest('[data-cact]');if(!b)return;
+    var id=+b.closest('.lrow').dataset.lid;
+    ledger=ledger.filter(function(l){return l.id!==id;});saveLedger();renderClose();
+  });
+  $('btnExtra').addEventListener('click',function(){
+    var desc=$('xDesc').value.trim(), v=parseFloat(String($('xVal').value).replace(',','.'));
+    if(!desc){$('xDesc').focus();return;}
+    if(isNaN(v)||v<=0){$('xVal').focus();return;}
+    var m=$('cMonth').value||today().slice(0,7);
+    ledger.push({id:Date.now(),date:m===today().slice(0,7)?today():m+'-01',kind:'extra',desc:desc,cat:'Outros gastos',qty:1,unit:'',total:r2(v)});
+    $('xDesc').value='';$('xVal').value='';
+    saveLedger();renderClose();
+  });
+  $('btnCloseMonth').addEventListener('click',function(){
+    var m=$('cMonth').value;if(!m)return;
+    var d=monthData(m);
+    var snap={month:m,spent:r2(d.total),buy:r2(d.buy),extra:r2(d.extra),stockValue:r2(stockValue()),closedAt:today(),
+      left:items.filter(function(i){return i.qty>0;}).map(function(i){return {name:i.name,qty:i.qty,unit:i.unit,value:r2(i.qty*(i.cost||0))};})};
+    closings=closings.filter(function(c){return c.month!==m;});closings.push(snap);
+    saveClosings();
+    renderClose();
+    $('cMsg').textContent='Mês fechado: gastou '+brl(snap.spent)+' e sobraram '+brl(snap.stockValue)+' em estoque.';
+  });
   renderShop();
 })();
 </script>
